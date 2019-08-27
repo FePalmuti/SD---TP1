@@ -3,14 +3,10 @@ import socket
 ip = ""
 porta = 7000
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((ip, porta))
-sock.listen(1)
-conexao, ip_cliente = sock.accept()
 
 while True:
-	conexao.recv(1024)
+	mensagem, endereco = sock.recvfrom(1024)
 	print("Chegou!")
-	resposta = "Respondendo ao teste"
-	conexao.send(resposta.encode())
-#
+	sock.sendto(bytearray("Resposta ao teste", "utf-8"), (endereco))
