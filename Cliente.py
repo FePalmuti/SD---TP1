@@ -1,45 +1,71 @@
 import socket
 from datetime import datetime
 
-ip = "127.0.0.1"
-porta = 7000
-timeout = 200 #Microsegundos
+class Cliente:
+	ip = "127.0.0.1"
+	porta = 7000
+	timeout = 0.00001 #Segundos
+	qnt_pacotes = 100
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	def __init__(self):
+		self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self.sock.settimeout(self.timeout)
 
-while True:
-	qnt_pacotes_perdidos = 0
-	somatorio_rtt = 0
-	somatorio_vazao = 0
+		while True:
+			input("Digite \"enter\" para pingar.")
+			self.qnt_pacotes_retornados = 0
+			self.qnt_pacotes_perdidos = 0
+			self.somatorio_rtt = 0
+			self.somatorio_vazao = 0
 
-	input("Digite \"enter\" para pingar.")
+			for i in range(self.qnt_pacotes):
+				tempo_inicial = datetime.now()
+				self.sock.sendto(bytearray("Testando ping", "UTF-8"), (self.ip, self.porta))
 
-	for i in range(100):
-		tempo_inicial = datetime.now()
-		sock.sendto(bytearray("Testando ping", "UTF-8"), (ip, porta))
-		sock.recvfrom(1024)
-		tempo_final = datetime.now()
-		intervalo_de_tempo = tempo_final - tempo_inicial
+				try:
+					self.sock.recvfrom(1024)
+					print("Pacote " + str(i + 1) + " retornado!")
+					self.qnt_pacotes_retornados += 1
 
-		#O intervalo de tempo passa a ser em microsegundos
-		intervalo_de_tempo = intervalo_de_tempo.microseconds
-		if(intervalo_de_tempo > timeout):
-			#Contabiliza o pacote perdido
-			qnt_pacotes_perdidos += 1
+					tempo_final = datetime.now()
+					intervalo_de_tempo = tempo_final - tempo_inicial
+					#O intervalo de tempo passa a ser em microsegundos
+					intervalo_de_tempo = intervalo_de_tempo.microseconds
+					print("RTT: " + str(int(intervalo_de_tempo)) + " microsegundos.\n")
+
+					self.contabilizar_rtt(intervalo_de_tempo)
+					self.contabilizar_vazao(intervalo_de_tempo)
+				except socket.timeout:
+					print("Pacote " + str(i + 1) + " perdido!\n")
+					self.qnt_pacotes_perdidos += 1
+
+			self.gerar_relatorio()
+
+	def contabilizar_rtt(self, intervalo_de_tempo):
+		self.somatorio_rtt += intervalo_de_tempo
+
+	def contabilizar_vazao(self, intervalo_de_tempo):
+		#Conversao de microsegundos para segundos
+		intervalo_de_tempo = intervalo_de_tempo/1000000
+		#Calculo da vazao
+		vazao = 1024/intervalo_de_tempo
+		#Conversao de B/s para MB/s
+		vazao = vazao/1048576
+		#Contabiliza a vazao
+		self.somatorio_vazao += vazao
+
+	def gerar_relatorio(self):
+		#Verificacao necessaria para evitar divisao por zero
+		if self.qnt_pacotes_retornados != 0:
+			rtt_medio = self.somatorio_rtt / self.qnt_pacotes_retornados
+			print("RTT medio: " + str(int(rtt_medio)) + " microsegundos.")
+			vazao_media = self.somatorio_vazao / self.qnt_pacotes_retornados
+			print("Vazao: " + str(round(vazao_media, 2)) + " MB/s.")
 		else:
-			#Contabiliza o RTT
-			somatorio_rtt += intervalo_de_tempo
-			#Conversao de microsegundos para segundos
-			intervalo_de_tempo = intervalo_de_tempo/1000000
-			#Calculo da vazao
-			vazao = 1024/intervalo_de_tempo
-			#Conversao de B/s para MB/s
-			vazao = vazao/1048576
-			#Contabiliza a vazao
-			somatorio_vazao += vazao
+			print("Nenhum pacote voltou!")
+		proporcao_perda = self.qnt_pacotes_perdidos / self.qnt_pacotes
+		percentual_perda = round(proporcao_perda * 100, 2)
+		print("Taxa de perda: " + str(percentual_perda) + "%\n")
 
-	rtt_medio = somatorio_rtt / (100 - qnt_pacotes_perdidos)
-	print("RTT medio: " + str(int(rtt_medio)) + " microsegundos.")
-	vazao_media = somatorio_vazao / (100 - qnt_pacotes_perdidos)
-	print("Vazao: " + str(round(vazao_media, 2)) + " MB/s.")
-	print("Taxa de perda: " + str(qnt_pacotes_perdidos) + "%\n")
+
+Cliente()
