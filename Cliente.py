@@ -6,7 +6,6 @@ class Cliente:
 	porta = 7000
 	timeout = 0.7 #Segundos
 	qnt_pacotes = 10
-	lista_rtts = []
 
 	def __init__(self):
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -16,6 +15,7 @@ class Cliente:
 		while op != "x":
 			self.qnt_pacotes_retornados = 0
 			self.qnt_pacotes_perdidos = 0
+			self.lista_rtts = []
 
 			for id in range(self.qnt_pacotes):
 				tempo_inicial = time.time()
