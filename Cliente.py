@@ -50,11 +50,16 @@ class Cliente:
 			for tempo in self.lista_rtts:
 				somatorio_rtts += tempo
 			rtt_medio = somatorio_rtts / self.qnt_pacotes_retornados
-			print("RTT medio:", rtt_medio, "s")
-			return rtt_medio
+		else:
+			rtt_medio = 0
+		print("RTT medio:", rtt_medio, "s")
+		return rtt_medio
 
 	def calcular_vazao(self, rtt_medio):
-		vazao = 1024 / rtt_medio
+		if rtt_medio != 0:
+			vazao = 1024 / rtt_medio
+		else:
+			vazao = 0
 		print("Vazao:", vazao, "B/s")
 
 	def calcular_taxa_perda(self):
