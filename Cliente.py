@@ -1,71 +1,75 @@
 import socket
-from datetime import datetime
+import time
 
 class Cliente:
 	ip = "127.0.0.1"
 	porta = 7000
-	timeout = 0.00001 #Segundos
-	qnt_pacotes = 100
+	timeout = 0.7 #Segundos
+	qnt_pacotes = 10
+	lista_rtts = []
 
 	def __init__(self):
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.sock.settimeout(self.timeout)
 
-		while True:
-			input("Digite \"enter\" para pingar.")
+		op = self.perguntar_opcao_ao_usuario()
+		while op != "x":
 			self.qnt_pacotes_retornados = 0
 			self.qnt_pacotes_perdidos = 0
-			self.somatorio_rtt = 0
-			self.somatorio_vazao = 0
 
-			for i in range(self.qnt_pacotes):
-				tempo_inicial = datetime.now()
-				self.sock.sendto(bytearray("Testando ping", "UTF-8"), (self.ip, self.porta))
+			for id in range(self.qnt_pacotes):
+				tempo_inicial = time.time()
+				self.sock.sendto(str(id).encode(), (self.ip, self.porta))
 
 				try:
-					self.sock.recvfrom(1024)
-					print("Pacote " + str(i + 1) + " retornado!")
-					self.qnt_pacotes_retornados += 1
+					id_incorrespondente = True
+					while id_incorrespondente:
+						mensagem, endereco = self.sock.recvfrom(1024)
+						id_recebido = int(mensagem.decode())
+						if id_recebido == id:
+							tempo_final = time.time()
+							intervalo_de_tempo = tempo_final - tempo_inicial
+							self.lista_rtts.append(intervalo_de_tempo)
+							print("Pacote", str(id + 1), "retornou em", intervalo_de_tempo, "s.")
+							self.qnt_pacotes_retornados += 1
+							id_incorrespondente = False
 
-					tempo_final = datetime.now()
-					intervalo_de_tempo = tempo_final - tempo_inicial
-					#O intervalo de tempo passa a ser em microsegundos
-					intervalo_de_tempo = intervalo_de_tempo.microseconds
-					print("RTT: " + str(int(intervalo_de_tempo)) + " microsegundos.\n")
-
-					self.contabilizar_rtt(intervalo_de_tempo)
-					self.contabilizar_vazao(intervalo_de_tempo)
 				except socket.timeout:
-					print("Pacote " + str(i + 1) + " perdido!\n")
+					print("Pacote", str(id + 1), "perdido!")
 					self.qnt_pacotes_perdidos += 1
 
 			self.gerar_relatorio()
+			op = self.perguntar_opcao_ao_usuario()
 
-	def contabilizar_rtt(self, intervalo_de_tempo):
-		self.somatorio_rtt += intervalo_de_tempo
+	def perguntar_opcao_ao_usuario(self):
+		return input("Digite \"enter\" para pingar ou \"x\" para sair.\n")
 
-	def contabilizar_vazao(self, intervalo_de_tempo):
-		#Conversao de microsegundos para segundos
-		intervalo_de_tempo = intervalo_de_tempo/1000000
-		#Calculo da vazao
-		vazao = 1024/intervalo_de_tempo
-		#Conversao de B/s para MB/s
-		vazao = vazao/1048576
-		#Contabiliza a vazao
-		self.somatorio_vazao += vazao
+	def calcular_rtt_medio(self):
+		if self.qnt_pacotes_retornados != 0:
+			somatorio_rtts = 0
+			for tempo in self.lista_rtts:
+				somatorio_rtts += tempo
+			rtt_medio = somatorio_rtts / self.qnt_pacotes_retornados
+			print("RTT medio:", rtt_medio, "s")
+			return rtt_medio
+
+	def calcular_vazao(self, rtt_medio):
+		vazao = 1024 / rtt_medio
+		print("Vazao:", vazao, "B/s")
+
+	def calcular_taxa_perda(self):
+		proporcao_perda = self.qnt_pacotes_perdidos / self.qnt_pacotes
+		percentual_perda = proporcao_perda * 100
+		percentual_perda = round(percentual_perda, 2)
+		print("Taxa de perda:", percentual_perda, "%")
 
 	def gerar_relatorio(self):
-		#Verificacao necessaria para evitar divisao por zero
-		if self.qnt_pacotes_retornados != 0:
-			rtt_medio = self.somatorio_rtt / self.qnt_pacotes_retornados
-			print("RTT medio: " + str(int(rtt_medio)) + " microsegundos.")
-			vazao_media = self.somatorio_vazao / self.qnt_pacotes_retornados
-			print("Vazao: " + str(round(vazao_media, 2)) + " MB/s.")
-		else:
-			print("Nenhum pacote voltou!")
-		proporcao_perda = self.qnt_pacotes_perdidos / self.qnt_pacotes
-		percentual_perda = round(proporcao_perda * 100, 2)
-		print("Taxa de perda: " + str(percentual_perda) + "%\n")
+		print("---------------------------------------------------------------")
+		rtt_medio = self.calcular_rtt_medio()
+		self.calcular_vazao(rtt_medio)
+		self.calcular_taxa_perda()
+		print()
 
 
 Cliente()
+#
