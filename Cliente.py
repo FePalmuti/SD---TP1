@@ -30,6 +30,7 @@ class Cliente:
 							tempo_final = time.time()
 							intervalo_de_tempo = tempo_final - tempo_inicial
 							self.lista_rtts.append(intervalo_de_tempo)
+							intervalo_de_tempo = round(intervalo_de_tempo, 2)
 							print("Pacote", str(id + 1), "retornou em", intervalo_de_tempo, "s.")
 							self.qnt_pacotes_retornados += 1
 							id_incorrespondente = False
@@ -52,6 +53,7 @@ class Cliente:
 			rtt_medio = somatorio_rtts / self.qnt_pacotes_retornados
 		else:
 			rtt_medio = 0
+		rtt_medio = round(rtt_medio, 2)
 		print("RTT medio:", rtt_medio, "s")
 		return rtt_medio
 
@@ -60,6 +62,7 @@ class Cliente:
 			vazao = 1024 / rtt_medio
 		else:
 			vazao = 0
+		vazao = round(vazao, 2)
 		print("Vazao:", vazao, "B/s")
 
 	def calcular_taxa_perda(self):
